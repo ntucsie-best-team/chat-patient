@@ -1,3 +1,5 @@
+from argparse import ArgumentParser, Namespace
+from pathlib import Path
 from typing import Dict, Any
 from abc import ABC, abstractmethod
 
@@ -31,7 +33,7 @@ class E2ENLIEvaluator(FaithfulnessEvaluator):
     def __init__(
         self,
         model_name: str,
-        device: torch.device
+        device: str
     ):
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -101,3 +103,24 @@ class E2ENLIEvaluator(FaithfulnessEvaluator):
         answer: str
     ):
         return context, question + " " + answer
+
+def parse_args() -> Namespace:
+    parser = ArgumentParser()
+
+    parser.add_argument("--model_name", type=str, default="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--tsv_path", type=Path, required=True)
+    parser.add_argument("--out_dir", type=Path, required=True, help="Path to save the evaluation results")
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    print(f"Initializing evaluator with model {args.model_name}...")
+    evaluator = E2ENLIEvaluator(args.model_name, args.device)
+    df = pd.read_csv(args.tsv_path, sep="\t")
+    print(f"Evaluating on {len(df)} examples...")
+    edf = evaluator(df)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    edf.to_csv(args.out_dir / args.tsv_path.name, sep="\t", index=False)
