@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 from typing import List, Dict
+from argparse import ArgumentParser, Namespace
 
 def preprocess_mts_dialog(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -36,8 +37,17 @@ def preprocess_mts_dialog(df: pd.DataFrame) -> pd.DataFrame:
         context_l += [context] * len(qa_pairs)
     return pd.DataFrame({"ID": id_l, "context": context_l, "question": question_l, "answer": answer_l})
 
+def parse_args() -> Namespace:
+    parser = ArgumentParser()
+    parser.add_argument("--dataset_name", type=str, choices=["MTS-Dialog", "DDXPlus"], required=True)
+    parser.add_argument("--csv_path", type=str, required=True)
+    parser.add_argument("--out_path", type=str, required=True)
+    args = parser.parse_args()
+    return args
+
 if __name__ == "__main__":
-    name = "MTS-Dialog-TrainingSet"
-    df = pd.read_csv(f"../data/MTS-Dialog/Main-Dataset/{name}.csv", index_col="ID")
-    df = preprocess_mts_dialog(df)
-    print(df.head())
+    args = parse_args()
+    if args.dataset_name == "MTS-Dialog":
+        df = pd.read_csv(args.csv_path, index_col="ID")
+        df = preprocess_mts_dialog(df)
+        df.to_csv(args.out_path, sep='\t', index=False)
