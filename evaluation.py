@@ -40,10 +40,21 @@ class E2ENLIEvaluator(FaithfulnessEvaluator):
     # TODO: evaluate on a full dataset of (context, question, answer) triplets
     def __call__(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Input format: a dataframe with the index field "ID" and the fields "context": str, "qa_pair": Dict[str, str] (keys: 'Q', 'A')
+        Input format: a dataframe with the fields "ID": int, "context": str, "question": str, "answer": str
         Output format: the original dataframe with 3 additional fields "raw_score": Dict[str, float], "score": float, and "pred": str (one of "entailment", "neutral", "contradiction")
         """
-        raise NotImplementedError
+        pbar = tqdm(total=len(df))
+        def _evaluate_qa(row):
+            pbar.update(1)
+            return self.evaluate_qa(row.context, row.question, row.answer)
+        res = df.apply(_evaluate_qa, axis=1).tolist()
+        pbar.close()
+
+        fields = list(res[0].keys())
+        for field in fields:
+            df[field] = [r[field] for r in res]
+
+        return df
     
     def evaluate_qa(
         self,
